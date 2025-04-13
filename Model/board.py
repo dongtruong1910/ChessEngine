@@ -315,35 +315,40 @@ class Board():
                     
         return True
 
-    def undo_move(self):
-        """Hoàn tác nước đi cuối cùng"""
-        if self.move_history:
-            start, end, piece = self.move_history.pop()
+    # def undo_move(self):
+    #     """Hoàn tác nước đi cuối cùng"""
+    #     if self.move_history:
+    #         start, end, piece = self.move_history.pop()
+    #
+    #         self.squares[start] = piece
+    #         self.squares[end] =
+    #         del self.squares[end]
+    #         piece.move(start)
+    #         piece.has_moved = False
+    #         self.current_turn = "black" if self.current_turn == "white" else "white"
+    def clone(self):
+        """
+        Create a deep copy of the current board state.
+        Returns:
+            A new Board object with the same state
+        """
+        new_board = Board()
 
-            # Check if this was a castling move
-            was_castling = isinstance(piece, King) and abs(end[1] - start[1]) == 2
+        # Clear the new board's squares first
+        new_board.squares = {}
 
-            # Restore the piece to its original position
-            self.squares[start] = piece
-            del self.squares[end]
-            piece.position = start
-            piece.has_moved = False  # Reset has_moved flag
+        # Copy all pieces
+        for pos, piece in self.squares.items():
+            piece_type = type(piece)
+            new_piece = piece_type(piece.color, pos)
+            new_piece.has_moved = piece.has_moved
+            new_board.squares[pos] = new_piece
 
-            # Handle undoing rook movement for castling
-            if was_castling:
-                # Determine rook positions
-                rook_row = start[0]
-                new_rook_col = 5 if end[1] > start[1] else 3  # Where rook moved to
-                old_rook_col = 7 if end[1] > start[1] else 0  # Original rook position
+        # Copy other board state
+        new_board.current_turn = self.current_turn
+        new_board.move_history = self.move_history.copy()
 
-                # Get the rook and move it back
-                rook = self.squares.get((rook_row, new_rook_col))
-                if rook and isinstance(rook, Rook):
-                    self.squares[(rook_row, old_rook_col)] = rook
-                    del self.squares[(rook_row, new_rook_col)]
-                    rook.position = (rook_row, old_rook_col)
-                    rook.has_moved = False  # Reset has_moved flag
+        # Update the status of all pieces on the new board
+        new_board.update_all_pieces_status()
 
-            # Update game state
-            self.update_all_pieces_status()
-            self.current_turn = "black" if self.current_turn == "white" else "white"
+        return new_board

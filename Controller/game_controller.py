@@ -42,6 +42,10 @@ class GameController:
         self.valid_moves = []
         self.game_over = False
         self.winner = None  # "white", "black" hoặc None nếu hòa
+
+        # Make AI's first move if player is black
+        if self.player_color == "black" and self.board.current_turn == "white":
+            self.make_ai_move()
         
     def init_view(self, board_size=640, margin=30):
         """Khởi tạo view cho game"""
@@ -85,8 +89,12 @@ class GameController:
             return
             
         # # Nếu là lượt của AI, không xử lý click
-        # if self.board.current_turn != self.player_color:
-        #     return
+        if self.board.current_turn != self.player_color:
+            # Still allow scrolling history during AI's turn
+            if self.board_view and hasattr(self.board_view, 'handle_scroll'):
+                self.board_view.handle_scroll(pos)
+                self.update_view()
+            return
 
         # Xử lý cuộn lịch sử nước đi - check this first before other interactions
         if self.board_view and hasattr(self.board_view, 'handle_scroll'):
@@ -94,13 +102,13 @@ class GameController:
                 self.update_view()
                 return
 
-
-
-            
         clicked_square = self.board_view.get_clicked_square(pos)
         if clicked_square is None:
             return
-            
+
+
+
+
         if self.selected_piece is None:
             # Chọn quân cờ
             piece_data = self.board.get_piece_data(clicked_square)
@@ -128,8 +136,8 @@ class GameController:
                 self.check_win()
                 
                 # Nếu chưa kết thúc game, cho AI đi
-                # if not self.game_over:
-                #     self.make_ai_move()
+                if not self.game_over and self.board.current_turn != self.player_color:
+                    self.make_ai_move()
             
             # Bỏ chọn quân cờ
             self.selected_piece = None
@@ -205,7 +213,8 @@ class GameController:
             else:
                 self.ai_remaining_time -= elapsed_time
             self.current_turn_start_time = current_time
-            
+
+
         # Kiểm tra chiến thắng
         self.check_win()
         self.update_view()

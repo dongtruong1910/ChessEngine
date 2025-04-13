@@ -154,7 +154,7 @@ class BoardView:
         # ve o vuong
         for row in range(8):
             for col in range(8):
-                display_row, display_col = (7 - row, col) if self.player_color == "black" else (row, col)
+                display_row, display_col = (7 - row, 7- col) if self.player_color == "black" else (row, col)
 
                 x = self.margin + display_col * self.square_size
                 y = self.margin + display_row * self.square_size
