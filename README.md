@@ -1,4 +1,5 @@
-Basic ChessEngine with Python :::::
+---PYTHON CHESSENGINE---
+
 Mode: 1 Player vs ChessEngine
 
 Menu_View: Choose time and Color to play 
