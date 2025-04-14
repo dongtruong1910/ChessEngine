@@ -5,11 +5,12 @@ from typing import Optional
 # Màn hình kết thúc game
 class EndgameView:
 
-    def __init__(self, screen, winner: Optional[str] = None):
+    def __init__(self, screen, winner: Optional[str] = None, win_by_checkmate: Optional[bool] = None):
         self.screen = screen
         self.winner = winner
         self.screen_width = screen.get_width()
         self.screen_height = screen.get_height()
+        self.win_by_checkmate = win_by_checkmate
 
         # Font cho text
         self.title_font = pygame.font.SysFont('Arial', 48, bold=True)
@@ -33,8 +34,10 @@ class EndgameView:
         self.screen.blit(overlay, (0, 0))
 
         # Hiển thị kết quả
-        if self.winner:
-            title_text = f"{self.winner.capitalize()} wins!"
+        if self.winner and self.win_by_checkmate:
+            title_text = f"{self.winner.capitalize()} wins! Checkmate!"
+        elif self.winner and not self.win_by_checkmate:
+            title_text = "Timeout! " + f"{self.winner.capitalize()} wins!"
         else:
             title_text = "Draw!"
 

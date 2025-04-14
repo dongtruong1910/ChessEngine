@@ -12,6 +12,7 @@ class BoardView:
         self.square_size = board_size / 8 # Kích thước mỗi ô
         self.margin = margin # Kích thước lề bàn cờ
         self.player_color = player_color
+        self.win_by_checkmate = None
 
         """
             Màu sắc của bàn cờ
@@ -164,7 +165,7 @@ class BoardView:
                 self.screen.blit(self.piece_images[image_key], rect)
 
     def update(self, pieces_data=None, selected_square=None, valid_moves=None, player_time=None,
-               ai_time=None, game_over=False, winner=None, move_history=None, board=None):
+               ai_time=None, game_over=False, winner=None, move_history=None, board=None, win_by_checkmate=None):
         """Cập nhật trạng thái hiển thị"""
         if not self.screen:
             self.init_screen()
@@ -184,6 +185,7 @@ class BoardView:
         # Cập nhật trạng thái game
         self.game_over = game_over
         self.winner = winner
+        self.win_by_checkmate = win_by_checkmate
 
         # Cập nhật thời gian
         if player_time is not None and ai_time is not None:
@@ -410,7 +412,7 @@ class BoardView:
 
         # Create and show endgame view
         from View.endgame_view import EndgameView
-        endgame_view = EndgameView(self.screen, winner)
+        endgame_view = EndgameView(self.screen, winner, self.win_by_checkmate)
         return endgame_view.draw()
 
     # Tô màu ô được chọn

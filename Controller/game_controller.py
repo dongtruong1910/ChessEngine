@@ -15,6 +15,8 @@ class GameController:
         self.player_color = player_color
         self.time_limit = time_limit * 60  # Chuyển đổi phút thành giây
 
+        self.win_by_checkmate = None
+
         # Khởi tạo model
         self.board = Board()
         
@@ -57,10 +59,12 @@ class GameController:
         if self.board.is_checkmate("white"):
             self.game_over = True
             self.winner = "black"
+            self.win_by_checkmate = True
             return True
         elif self.board.is_checkmate("black"):
             self.game_over = True
             self.winner = "white"
+            self.win_by_checkmate = True
             return True
             
         # Kiểm tra hết thời gian
@@ -211,7 +215,8 @@ class GameController:
                 ai_time=self.ai_remaining_time,
                 game_over=self.game_over,
                 winner=self.winner,
-                move_history = move_history
+                move_history = move_history,
+                win_by_checkmate = self.win_by_checkmate
             )
 
     def run(self):
