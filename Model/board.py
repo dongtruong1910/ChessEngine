@@ -6,15 +6,15 @@ from Model.piece import Piece, Pawn, Rook, Knight, Bishop, Queen, King
 class Board():
     def __init__(self):
         self.squares = {}  # Dictionary lưu trữ các quân cờ trên bàn
-        self.current_turn = "white"  # Lượt đi hiện tại
+        self.current_turn = "white"  # Lượt đi hiện tại, bắt đầu là white
         self.move_history = []  # Lịch sử các nước đi
         
         pygame.init()
         self.init_board()
         self.update_all_pieces_status()
 
+    # Khởi tạo bàn cờ
     def init_board(self):
-        """Khởi tạo bàn cờ với các quân cờ ở vị trí ban đầu"""
         # Khởi tạo quân trắng
         self.squares[(7, 0)] = Rook("white", (7, 0))
         self.squares[(7, 1)] = Knight("white", (7, 1))
@@ -26,7 +26,7 @@ class Board():
         self.squares[(7, 7)] = Rook("white", (7, 7))
         for col in range(8):
             self.squares[(6, col)] = Pawn("white", (6, col))
-            
+
         # Khởi tạo quân đen
         self.squares[(0, 0)] = Rook("black", (0, 0))
         self.squares[(0, 1)] = Knight("black", (0, 1))
@@ -38,13 +38,13 @@ class Board():
         self.squares[(0, 7)] = Rook("black", (0, 7))
         for col in range(8):
             self.squares[(1, col)] = Pawn("black", (1, col))
-            
+
+    # Lấy quân cờ tại vị trí trên bàn cờ
     def get_piece(self, position: Tuple[int, int]) -> Optional[Piece]:
-        """Lấy quân cờ tại vị trí position"""
         return self.squares.get(position)
 
+    # Lấy thông tin quân cờ tại vị trí trên bàn cờ
     def get_piece_data(self, position: Tuple[int, int]) -> Optional[dict]:
-        """Lấy thông tin của quân cờ để hiển thị"""
         piece = self.get_piece(position)
         if piece:
             return {
@@ -54,14 +54,8 @@ class Board():
             }
         return None
 
+    # Phong cấp tốt
     def promote_pawn(self, position: Tuple[int, int], promotion_type: str) -> None:
-        """
-        Thực hiện phong cấp tốt tại vị trí position thành loại quân cờ mới
-
-        Args:
-            position: Vị trí của tốt (row, col)
-            promotion_type: Loại quân cờ để phong cấp ("queen", "rook", "bishop", "knight")
-        """
         piece = self.get_piece(position)
         if not piece or not isinstance(piece, Pawn):
             return
@@ -87,14 +81,12 @@ class Board():
         # Cập nhật trạng thái quân cờ mới
         new_piece.update_status(self)
 
-    def move_piece(self, start: Tuple[int, int], end: Tuple[int, int]):
-        """Di chuyển quân cờ từ vị trí start đến vị trí end"""
-
+    # Di chuyển quân cờ
+    def move_piece(self, start: Tuple[int, int], end: Tuple[int, int]) -> bool:
         piece = self.squares.get(start)
 
-        # Xử lý en passant
+        # Xử lý bắt tốt qua đường
         if isinstance(piece, Pawn) and abs(end[1] - start[1]) == 1 and not self.get_piece(end):
-            # Đây là nước đi en passant
             captured_pawn_pos = (start[0], end[1])  # Vị trí của tốt bị bắt
             del self.squares[captured_pawn_pos]  # Xóa tốt bị bắt
 
@@ -112,6 +104,7 @@ class Board():
             if isinstance(piece, Pawn):
                 if (piece.color == "white" and end[0] == 0) or (piece.color == "black" and end[0] == 7):
                     needs_promotion = True
+
 
             # Xử lý nhập thành (nếu di chuyển vua 2 ô)
             if isinstance(piece, King) and abs(end[1] - start[1]) == 2:
@@ -136,8 +129,8 @@ class Board():
             self.current_turn = "black" if self.current_turn == "white" else "white"
             return needs_promotion
 
+    # Kiểm tra xem nước đi có hợp lệ không
     def is_valid_move(self, start: Tuple[int, int], end: Tuple[int, int]) -> bool:
-        """Kiểm tra xem nước đi từ start đến end có hợp lệ không"""
         piece = self.squares.get(start)
         if not piece or piece.color != self.current_turn:
             return False
@@ -145,20 +138,6 @@ class Board():
         # Kiểm tra nước đi có hợp lệ không
         if not piece.is_valid_move(self, end):
             return False
-
-        # # Xử lý đặc biệt cho castling
-        # is_castling = False
-        # if isinstance(piece, King) and abs(end[1] - start[1]) == 2:
-        #     is_castling = True
-        #     # Kiểm tra vua không đang bị chiếu
-        #     if self.is_check(piece.color):
-        #         return False
-        #
-        #     # Kiểm tra các ô vua đi qua không bị tấn công
-        #     col_direction = 1 if end[1] > start[1] else -1
-        #     for col in range(start[1], end[1] + col_direction, col_direction):
-        #         if self.is_square_under_attack((start[0], col), piece.color):
-        #             return False
 
         # Thử di chuyển và kiểm tra xem vua có bị chiếu không
         old_piece = self.squares.get(end)
@@ -183,24 +162,16 @@ class Board():
             self.squares[end] = old_piece
 
         return not is_check
-    
+
+    # Lấy quân vua của màu color, trả về None nếu không tìm thấy
     def get_king(self, color: str) -> Optional[King]:
-        """Lấy quân vua của màu color"""
         for piece in self.squares.values():
             if isinstance(piece, King) and piece.color == color:
                 return piece
         return None
-        
+
+    # Kiểm tra xem vua có bị chiếu không
     def is_check(self, color: str) -> bool:
-        """
-        Kiểm tra xem vua của màu color có đang bị chiếu không.
-        
-        Args:
-            color: Màu của vua cần kiểm tra ('white' hoặc 'black')
-            
-        Returns:
-            True nếu vua đang bị chiếu, False nếu không
-        """
         # Tìm vua của màu cần kiểm tra
         king = None
         for piece in self.squares.values():
@@ -218,39 +189,44 @@ class Board():
                     return True
         
         return False
-    
+
+    # Kiểm tra xem ô có bị tấn công không (dùng để xác định xem vua có đi vào vị trí đó được không)
     def is_square_under_attack(self, position: Tuple[int, int], color: str) -> bool:
-        """Kiểm tra xem một ô có bị tấn công không"""
         for piece in self.squares.values():
             if piece.color != color:
-                if piece.is_valid_move(self, position):
+                if isinstance(piece, King):
+                    # Kiểm tra xem quân vua có thể bị tấn công ô đó không
+                    king_pos = piece.position
+                    row_diff = abs(king_pos[0] - position[0])
+                    col_diff = abs(king_pos[1] - position[1])
+                    if row_diff <= 1 and col_diff <= 1:
+                        return True
+                elif piece.is_valid_move(self, position):
                     return True
         return False
-    
+
+    # Cập nhật trạng thái của tất cả quân cờ
     def update_all_pieces_status(self):
-        """Cập nhật trạng thái của tất cả các quân cờ"""
         for piece in self.squares.values():
             piece.update_status(self)
 
+    # Lấy tất cả các nước đi hợp lệ của quân cờ tại vị trí position
     def get_valid_moves(self, position: Tuple[int, int]) -> List[Tuple[int, int]]:
-        """Lấy danh sách các nước đi hợp lệ cho quân cờ tại vị trí position"""
         piece = self.squares.get(position)
         if not piece or piece.color != self.current_turn:
             return []
 
         valid_moves = []
 
-        # Normal move checking first
         for row in range(8):
             for col in range(8):
                 if self.is_valid_move(position, (row, col)):
                     valid_moves.append((row, col))
 
-
-
         return valid_moves
+
+    # Lấy thông tin tất cả quân cờ trên bàn
     def get_all_pieces(self) -> List[dict]:
-        """Lấy thông tin tất cả quân cờ trên bàn để hiển thị"""
         pieces = []
         for pos, piece in self.squares.items():
             pieces.append({
@@ -260,95 +236,72 @@ class Board():
             })
         return pieces
 
-    def get_king(self, color: str) -> Optional[King]:
-        """Lấy quân vua của màu color"""
-        for piece in self.squares.values():
-            if isinstance(piece, King) and piece.color == color:
-                return piece
-        return None
-
+    # Kiểm tra chiếu hết
     def is_checkmate(self, color: str) -> bool:
-        """Kiểm tra xem vua của màu color có bị chiếu tướng không"""
-        # 1. Kiểm tra chiếu trước
+
+        # Kiểm tra xem vua có bị chiếu không
         if not self.is_check(color):
             return False
 
-        # 2. Tìm vua
+        # Tìm vua
         king = self.get_king(color)
         if not king:
             return False
 
-        # 3. Kiểm tra tất cả các nước đi của quân cờ cùng màu
-        # First, create a copy of the positions to iterate over
+        # Kiểm tra tất cả các nước đi của quân cờ cùng màu
         positions = [(pos, piece) for pos, piece in self.squares.items() if piece.color == color]
 
         for piece_pos, piece in positions:
-            # Skip if the piece has been captured during iteration
             if self.squares.get(piece_pos) != piece:
                 continue
 
             valid_moves = []
-            # Build the list of potential moves
+            # Lấy tất cả các nước đi hợp lệ của quân cờ cùng màu
             for row in range(8):
                 for col in range(8):
                     if self.is_valid_move(piece_pos, (row, col)):
                         valid_moves.append((row, col))
-
-            # If there's any valid move, it's not checkmate
+            # Nếu có nước đi hợp lệ (có thể bảo vệ vua), thì không phải chiếu hết
             if valid_moves:
                 return False
 
-        # No valid moves to escape check
+        # Nếu không có nước đi nào hợp lệ, thì là chiếu hết
         return True
-        
+
+    # Kiểm tra hòa cờ
     def is_stalemate(self) -> bool:
-        """Kiểm tra xem có phải là hòa do không còn nước đi hợp lệ không"""
-        # 1. Kiểm tra xem vua có đang bị chiếu không
+        # Nếu chỉ còn 2 quân cờ trên bàn (vua và vua), thì hòa
+        if len(self.squares) == 2:
+            return True
+
+        # Kiểm tra xem vua có đang bị chiếu không
         if self.is_check(self.current_turn):
             return False
             
-        # 2. Kiểm tra xem có quân nào có thể di chuyển không
+        # Kiểm tra xem có quân nào có thể di chuyển không
         for piece in self.squares.values():
             if piece.color == self.current_turn:
                 if piece.get_valid_moves(self):
                     return False
-                    
         return True
 
-    # def undo_move(self):
-    #     """Hoàn tác nước đi cuối cùng"""
-    #     if self.move_history:
-    #         start, end, piece = self.move_history.pop()
-    #
-    #         self.squares[start] = piece
-    #         self.squares[end] =
-    #         del self.squares[end]
-    #         piece.move(start)
-    #         piece.has_moved = False
-    #         self.current_turn = "black" if self.current_turn == "white" else "white"
+
+    # Tạo 1 bản sao bàn cờ, dùng cho AI
     def clone(self):
-        """
-        Create a deep copy of the current board state.
-        Returns:
-            A new Board object with the same state
-        """
         new_board = Board()
-
-        # Clear the new board's squares first
-        new_board.squares = {}
-
-        # Copy all pieces
+        # Khởi tạo bàn cờ mới, giống bàn cờ hiện tại
+        new_board.squares = {} # Tạo một bản sao rỗng
+        # Copy các quân cờ
         for pos, piece in self.squares.items():
             piece_type = type(piece)
             new_piece = piece_type(piece.color, pos)
             new_piece.has_moved = piece.has_moved
             new_board.squares[pos] = new_piece
 
-        # Copy other board state
+        # Copy lượt đi hiện tại và lịch sử nước đi
         new_board.current_turn = self.current_turn
         new_board.move_history = self.move_history.copy()
 
-        # Update the status of all pieces on the new board
+        # Copy trạng thái của các quân cờ
         new_board.update_all_pieces_status()
-
         return new_board

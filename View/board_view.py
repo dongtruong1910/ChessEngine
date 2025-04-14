@@ -8,93 +8,74 @@ from Model.piece import King
 
 class BoardView:
     def __init__(self, board_size=640, margin=30, player_color=None):
-        """
-        board_size: kich thuoc ban co
-        margin: le cua ban co
-        """
-        self.board_size = board_size
-        self.square_size = board_size / 8
-        self.margin = margin
-        self.player_color = player_color  # Fix: properly store as instance attribute
+        self.board_size = board_size # Kích thước bàn cờ
+        self.square_size = board_size / 8 # Kích thước mỗi ô
+        self.margin = margin # Kích thước lề bàn cờ
+        self.player_color = player_color
 
         """
-        mau sac cua ban co
+            Màu sắc của bàn cờ
         """
-        self.LIGHT_SQUARE = Color('white')  # mau o sang
-        self.DARK_SQUARE = Color('green')  # mau o toi
-        self.HIGHLIGHT = (124, 192, 214, 170)  # mau goi y nuoc di
-        self.SELECTED = (106, 168, 79, 200)  # mau o dang chon
+        # Màu hai loại ô sáng và tối
+        self.LIGHT_SQUARE = Color('white')
+        self.DARK_SQUARE = Color('green')
+
+        # Màu sắc cho các ô được chọn và các nước đi hợp lệ
+        self.HIGHLIGHT = (124, 192, 214, 170)
+        self.SELECTED = (106, 168, 79, 200)
         self.ACTIVE_PLAYER = (255, 255, 200, 128)  # Màu highlight người chơi đang đi
 
         """
-        khoi tao man hinh
+            Khởi tạo màn hình chính
         """
-        self.screen_width = board_size + 2 * margin + 200  # Thêm 200px cho phần hiển thị lịch sử
+        self.screen_width = board_size + 2 * margin + 200
         self.screen_height = board_size + 2 * margin
         self.screen = None
 
         """
-        tai hinh anh quan co va nguoi choi
+            Tải hinh ảnh quân cờ và người chơi
         """
         self.piece_images = {}
         self.player_images = {}
 
-        # luu vi tri o dc chon va nuoc di hop le
+        # Biến lưu thông tin ô đc chọn và các nước đi hợp lệ
         self.selected_square = None
         self.valid_moves = []
         self.pieces_data = []  # Danh sách thông tin các quân cờ
 
-        # Font hien thi
+        # Font chữ cho tọa độ và đồng hồ
         self.coordinate_font = None
         self.clock_font = None
 
         # Thời gian cho mỗi người chơi (phút)
-        self.white_time = 10 * 60  # 10 phút
+        self.white_time = 10 * 60
         self.black_time = 10 * 60
         self.last_time_update = pygame.time.get_ticks()
 
-        # Thêm biến lưu trữ lịch sử nước đi
+        # Biến lưu trữ lịch sử nước đi
         self.move_history = []
 
-        # Thêm biến lưu trạng thái kết thúc game
+        # Biến lưu trạng thái kết thúc game
         self.game_over = False
         self.winner = None
 
-        # Khởi tạo board reference
         self.board = None
 
+    # Tải hinh người chơi
     def load_player_images(self):
-        """Tải hình ảnh người chơi"""
-        try:
-            image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'images')
 
-            # Tạo placeholder nếu không tìm thấy ảnh
-            for color in ['white', 'black']:
-                file_name = f"player_{color}.png"
-                file_path = os.path.join(image_path, file_name)
+        image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'images')
+        for color in ['white', 'black']:
+            file_name = f"player_{color}.png"
+            file_path = os.path.join(image_path, file_name)
 
-                if os.path.exists(file_path):
-                    img = pygame.image.load(file_path)
-                    img = pygame.transform.scale(img, (80, 80))  # Kích thước avatar
-                    self.player_images[color] = img
-                else:
-                    # Tạo hình ảnh mặc định
-                    surf = pygame.Surface((80, 80), pygame.SRCALPHA)
-                    pygame.draw.circle(surf, Color(color), (40, 40), 35)
-                    pygame.draw.circle(surf, Color('black'), (40, 40), 35, 2)
-                    self.player_images[color] = surf
-                    print(f"Không tìm thấy hình ảnh {file_path}, đã tạo ảnh mặc định")
-        except Exception as e:
-            print(f"Lỗi khi tải hình ảnh người chơi: {e}")
-            # Tạo hình ảnh mặc định trong trường hợp lỗi
-            for color in ['white', 'black']:
-                surf = pygame.Surface((80, 80), pygame.SRCALPHA)
-                pygame.draw.circle(surf, Color(color), (40, 40), 35)
-                pygame.draw.circle(surf, Color('black'), (40, 40), 35, 2)
-                self.player_images[color] = surf
+            img = pygame.image.load(file_path)
+            img = pygame.transform.scale(img, (80, 80))  # Kích thước avatar
+            self.player_images[color] = img
 
+
+    # Khởi tạo màn hình
     def init_screen(self):
-        """khoi tao man hinh pygame"""
         if self.screen is None:
             if pygame.display.get_surface() is None:
                 pygame.init()
@@ -103,7 +84,7 @@ class BoardView:
             else:
                 self.screen = pygame.display.get_surface()
 
-            # khoi tao font
+            # Khởi tọa font chữ
             pygame.font.init()
             self.coordinate_font = pygame.font.SysFont('Arial', 14)
             self.clock_font = pygame.font.SysFont('Arial', 24)
@@ -112,11 +93,10 @@ class BoardView:
             self.load_piece_images()
             self.load_player_images()
 
+    # Tải hình ảnh quân cờ
     def load_piece_images(self):
-        # duong dan den thu muc anh
         image_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'images')
 
-        # hinh anh cho tung quan co
         piece_names = ['pawn', 'knight', 'bishop', 'rook', 'queen', 'king']
         colors = ['white', 'black']
 
@@ -125,17 +105,12 @@ class BoardView:
                 file_name = f"{color}_{piece}.png"
                 file_path = os.path.join(image_path, file_name)
 
-                if os.path.exists(file_path):
-                    img = pygame.image.load(file_path)
-                    img = pygame.transform.scale(img, (int(self.square_size), int(self.square_size)))
-                    self.piece_images[f"{color}_{piece}"] = img
-                else:
-                    print(f"Cảnh báo: Không tìm thấy hình ảnh {file_path}")
+                img = pygame.image.load(file_path)
+                img = pygame.transform.scale(img, (int(self.square_size), int(self.square_size)))
+                self.piece_images[f"{color}_{piece}"] = img
 
+    # Tính toán tọa độ ô vuông, lât lại tọa độ 180 độ nếu chơi quân đen
     def get_square_rect(self, row, col):
-        """
-        Lấy hình chữ nhật cho một ô bàn cờ, điều chỉnh theo hướng bàn cờ
-        """
         if self.player_color == "black":
             # Lật tọa độ khi chơi quân đen
             row, col = 7 - row, 7 - col
@@ -144,14 +119,14 @@ class BoardView:
         y = self.margin + row * self.square_size
         return pygame.Rect(x, y, self.square_size, self.square_size)
 
+    # Vẽ bàn cờ
     def draw_board(self):
-        """Vẽ bàn cờ"""
         if not self.screen:
             self.init_screen()
 
         self.screen.fill((240, 240, 240))
 
-        # ve o vuong
+        # Vẽ các ô vuông
         for row in range(8):
             for col in range(8):
                 display_row, display_col = (7 - row, 7- col) if self.player_color == "black" else (row, col)
@@ -159,13 +134,13 @@ class BoardView:
                 x = self.margin + display_col * self.square_size
                 y = self.margin + display_row * self.square_size
 
-                # xan dinh mau o
+                # Chọn màu sắc cho ô vuông
                 color = self.LIGHT_SQUARE if (row + col) % 2 == 0 else self.DARK_SQUARE
 
-                # ve o vuong
+                # Vẽ ô vuông
                 pygame.draw.rect(self.screen, color, (x, y, self.square_size, self.square_size))
 
-                # ve toa do
+                # Vẽ tọa độ
                 if display_row == 7:  # a-h
                     text = self.coordinate_font.render(chr(97 + col), True,
                                                        (0, 0, 0) if color == self.LIGHT_SQUARE else (255, 255, 255))
@@ -176,11 +151,10 @@ class BoardView:
                                                        (0, 0, 0) if color == self.LIGHT_SQUARE else (255, 255, 255))
                     self.screen.blit(text, (x + 5, y + 5))
 
+    # Vẽ các quân cờ dựa trên hình ảnh đã tải
     def draw_pieces(self):
-        """Vẽ các quân cờ"""
         if not self.screen:
             return
-
         for piece_data in self.pieces_data:
             row, col = piece_data['position']
             rect = self.get_square_rect(row, col)
@@ -206,8 +180,6 @@ class BoardView:
             self.move_history = move_history
         if board is not None:
             self.board = board
-
-
 
         # Cập nhật trạng thái game
         self.game_over = game_over
@@ -248,14 +220,14 @@ class BoardView:
         # Vẽ lịch sử nước đi
         self.draw_move_history()
 
-        # Hiển thị thông báo kết thúc game nếu cần
+        # Hiển thị thông báo kết thúc game
         if self.game_over:
             self.show_game_over(self.winner)
 
         pygame.display.flip()
 
+    # Lấy tọa độ ô vuông được click
     def get_clicked_square(self, pos: Tuple[int, int]) -> Optional[Tuple[int, int]]:
-        """Lấy tọa độ ô được click"""
         x, y = pos
         if (self.margin <= x < self.margin + self.board_size and
                 self.margin <= y < self.margin + self.board_size):
@@ -267,8 +239,8 @@ class BoardView:
             return (row, col)
         return None
 
+    # Vẽ người chơi và đồng hồ
     def draw_players_and_clock(self):
-        """Vẽ hình ảnh người chơi và đồng hồ"""
         if not self.screen:
             return
 
@@ -277,7 +249,7 @@ class BoardView:
         white_player_y = self.margin
         black_player_y = self.margin + 130
 
-        # Get current turn color
+        # Lây màu sắc của người chơi hiện tại
         current_turn = "white" if len(self.move_history) % 2 == 0 else "black"
 
         # Vẽ khung người chơi trắng
@@ -312,13 +284,13 @@ class BoardView:
         black_time_text = self.clock_font.render(black_time_str, True, Color('black'))
         self.screen.blit(black_time_text, (info_x + 100, black_player_y + 40))
 
+    # Cập nhật thời gian cho người chơi và AI
     def update_time(self, player_time: float, ai_time: float):
-        """Cập nhật thời gian cho người chơi và AI"""
         self.white_time = player_time if self.player_color == 'white' else ai_time
         self.black_time = ai_time if self.player_color == 'white' else player_time
 
+    # Định dạng thời gian thành phút:giây
     def format_time(self, seconds: float) -> str:
-        """Định dạng thời gian từ giây thành chuỗi phút:giây"""
         if seconds is None:
             return "00:00"
 
@@ -326,8 +298,8 @@ class BoardView:
         seconds = int(seconds % 60)
         return f"{minutes:02d}:{seconds:02d}"
 
+    # Vẽ lịch sử nước đi
     def draw_move_history(self):
-        """Vẽ lịch sử các nước đi với khả năng cuộn"""
         if not self.screen or not self.move_history:
             return
 
@@ -375,9 +347,9 @@ class BoardView:
         # Số dòng có thể hiển thị trong khung
         visible_lines = 9  # Số dòng có thể hiển thị với khoảng cách 12.5px
 
-        # Tổng số nước đi hiển thị (mỗi nước chiếm 2 dòng)
+        # Tổng số nước đi hiển thị
         total_moves = len(self.move_history)
-        total_lines = (total_moves + 1) // 2  # Làm tròn lên
+        total_lines = (total_moves + 1) // 2
 
         # Giới hạn scroll_offset
         max_offset = max(0, total_lines - visible_lines)
@@ -424,7 +396,6 @@ class BoardView:
                 print(f"Error displaying move {i}: {e}")
 
 
-
         # Khôi phục clipping
         self.screen.set_clip(None)
 
@@ -432,8 +403,8 @@ class BoardView:
         self.scroll_up_button = scroll_up_rect
         self.scroll_down_button = scroll_down_rect
 
+    # Hiển thị thông báo kết thúc game
     def show_game_over(self, winner: Optional[str] = None):
-        """Hiển thị thông báo kết thúc game và tùy chọn tiếp tục"""
         if not self.screen:
             return
 
@@ -442,8 +413,8 @@ class BoardView:
         endgame_view = EndgameView(self.screen, winner)
         return endgame_view.draw()
 
+    # Tô màu ô được chọn
     def highlight_selected_square(self, square: Tuple[int, int]):
-        """Tô màu ô được chọn"""
         if not self.screen or not square:
             return
 
@@ -456,15 +427,15 @@ class BoardView:
         # Vẽ surface lên màn hình
         self.screen.blit(highlight_surface, rect)
 
+    # Tính toán tọa độ trung tâm của ô vuông
     def get_square_center(self, square: Tuple[int, int]) -> Tuple[int, int]:
-        """Tính toán tọa độ trung tâm của ô cờ"""
         row, col = square
         x = self.margin + col * self.square_size + self.square_size // 2
         y = self.margin + row * self.square_size + self.square_size // 2
         return (x, y)
 
+    # Tô màu các nước đi hợp lệ
     def highlight_valid_moves(self, valid_moves: List[Tuple[int, int]]):
-        """Hiển thị các nước đi hợp lệ"""
         if not self.screen or not valid_moves:
             return
 
@@ -478,8 +449,8 @@ class BoardView:
             # Vẽ surface lên màn hình
             self.screen.blit(highlight_surface, rect)
 
+    # Xử lý sự kiện cuộn lịch sử nước đi
     def handle_scroll(self, pos):
-        """Xử lý sự kiện cuộn lịch sử nước đi"""
         if hasattr(self, 'scroll_up_button') and self.scroll_up_button.collidepoint(pos):
             # Cuộn lên
             print("Scroll up clicked!")

@@ -7,8 +7,8 @@ class ChessAI:
         self.color = color  # Màu quân của AI
         self.depth = depth  # Độ sâu tìm kiếm
 
-        self.CHECK_MATE = 12000  # Giá trị đánh giá cho chiếu tướng
-        self.STALE_MATE = 0  # Giá trị đánh giá cho hòa
+        self.CHECK_MATE = 20000  # Giá trị đánh giá cho chiếu tướng
+        self.STALE_MATE = 0  # Giá trị đánh giá cho hòa cờ
 
 
         # Tham khảo hàm đánh giá https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
@@ -16,7 +16,6 @@ class ChessAI:
         """
             Đây là giá trị cho white, nếu là black thì sẽ lấy giá trị âm
         """
-
         # Giá trị của từng loại quân cho midgame và endgame
         self.midgame_value = [82,337,365,477,1025,0]  # Tốt, Mã, Tượng, Xe, Hậu, Vua
         self.endgame_value = [94,281,297,512,936,0]  # Tốt, Mã, Tượng, Xe, Hậu, Vua
@@ -26,11 +25,10 @@ class ChessAI:
             PST (Piece Square Table) - Bảng giá trị vị trí cho từng quân cờ. 
             Đây là cho white, nếu black thì sẽ đảo ngược hàng row = 7 - row
         """
-
-        # Update midgame and endgame position values for each piece
+        # Bảng giá trị vị trí cho từng quân cờ trong giai đoạn giữa
         self.midgame_position_value = {
             Pawn: [
-                [0, 0, 0, 0, 0, 0, 0, 0],
+                [1025, 1025, 1025, 1025, 1025, 1025, 1025, 1025],
                 [98, 134, 61, 95, 68, 126, 34, -11],
                 [-6, 7, 26, 31, 65, 56, 25, -20],
                 [-14, 13, 6, 21, 23, 12, 17, -23],
@@ -90,11 +88,10 @@ class ChessAI:
                 [-15, 36, 12, -54, 8, -28, 24, 14]
             ]
         }
-
-        # Add endgame position values
+        # Bảng giá trị vị trí cho từng quân cờ trong giai đoạn cuối
         self.endgame_position_value = {
             Pawn: [
-                [0, 0, 0, 0, 0, 0, 0, 0],
+                [936, 936, 936, 936, 936, 936, 936, 936],
                 [178, 173, 158, 134, 147, 132, 165, 187],
                 [94, 100, 85, 67, 56, 53, 82, 84],
                 [32, 24, 13, 5, -2, 4, 17, 17],
@@ -155,7 +152,7 @@ class ChessAI:
             ]
         }
 
-        # Game phase increments for each piece (used for tapered evaluation)
+        # Dictionary để đánh giá giai đoạn của trò chơi
         self.gamephase_inc = {
             Pawn: 0,
             Knight: 1,
@@ -164,8 +161,8 @@ class ChessAI:
             Queen: 4,
             King: 0
         }
+    # Hàm lấy chỉ số của quân cờ trong mảng đánh giá midgame và endgame
     def get_piece_index(self,piece_type):
-        """Maps piece type to index for value arrays"""
         if piece_type == Pawn:
             return 0
         elif piece_type == Knight:
@@ -180,69 +177,54 @@ class ChessAI:
             return 5
         return 0  # Default case
 
+    # Hàm đánh giá bàn cờ
     def evaluate_board(self, board: Board) -> int:
-        """
-        Evaluate the board using piece values and position tables with tapered evaluation.
-        Combines midgame and endgame scores based on the game phase.
-        Returns a score from the perspective of the AI's color.
-        """
         mg_score = {"white": 0, "black": 0}
         eg_score = {"white": 0, "black": 0}
         game_phase = 0
 
-        # Evaluate each piece on the board
+        # Đánh giá các quân cờ trên bàn cờ
         for row in range(8):
             for col in range(8):
                 piece = board.get_piece((row, col))
                 if piece:
-                    # Get basic piece value and position value
+                    # Lấy loại quân và màu sắc
                     piece_type = type(piece)
                     color = piece.color
 
-                    # Get the position value, flip row for black pieces
+                    # lấy chỉ số hàng và cột cho midgame và endgame (lật ngược hàng cho quân đen)
                     pos_row = row if color == "white" else 7 - row
-
                     piece_index = self.get_piece_index(piece_type)
 
-                    # Add midgame and endgame values
-                    mg_score[color] += self.midgame_value[piece_index] + \
-                                       self.midgame_position_value[piece_type][pos_row][col]
-                    eg_score[color] += self.endgame_value[piece_index] + \
-                                       self.endgame_position_value[piece_type][pos_row][col]
+                    # Điểm số đánh midgame và endgame của cả trắng và đen (bằng điểm của mảng đánh giá + điểm vị trí)
+                    mg_score[color] += self.midgame_value[piece_index] + self.midgame_position_value[piece_type][pos_row][col]
 
-                    # Update game phase
+                    eg_score[color] += self.endgame_value[piece_index] + self.endgame_position_value[piece_type][pos_row][col]
+
+                    # Cập nhâật giai đoạn game
                     game_phase += self.gamephase_inc[piece_type]
 
-        # Calculate total scores for midgame and endgame
+        # Tính toán tổng điểm cho cả hai giai đoạn midgame và endgame
         mg_total = mg_score["white"] - mg_score["black"]
         eg_total = eg_score["white"] - eg_score["black"]
 
-        # Calculate tapered score based on game phase
-        # Max phase value is 24 (1 point for knights/bishops, 2 for rooks, 4 for queens)
-        mg_phase = min(game_phase, 24)
+        # Tính toán điểm số pha trộn giữa midgame và endgame
+        mg_phase = min(game_phase, 24)  # Giới hạn giai đoạn game từ 0 đến 24
         eg_phase = 24 - mg_phase
 
-        # Calculate final score
+        # Tính toán điểm số cuối cùng dựa trên tỷ lệ giữa midgame và endgame
         score = (mg_total * mg_phase + eg_total * eg_phase) // 24
 
-        # Return score from AI's perspective
+        # Trả về điểm số cho quân trắng là dương và quân đen là âm
         return score if self.color == "white" else -score
 
+    # Hàm tìm nước đi tốt nhất cho AI với alpha-beta pruning
     def minimax_alpha_beta(self, board: Board, depth: int, alpha: float, beta: float,
                            is_maximizing: bool) -> Tuple[int, Optional[Tuple[Tuple[int, int], Tuple[int, int]]]]:
-        """
-        Thuật toán alpha-beta pruning để tìm nước đi tốt nhất.
-        """
-        # # Increment position counter
-        # if not hasattr(self, 'positions_evaluated'):
-        #     self.positions_evaluated = 0
-        # self.positions_evaluated += 1
 
-        # Kiểm tra điều kiện dừng
         if depth == 0:
             return self.evaluate_board(board), None
 
-        # Kiểm tra chiếu tướng hoặc hòa cờ
         if board.is_checkmate("white"):
             return -self.CHECK_MATE if self.color == "white" else self.CHECK_MATE, None
         elif board.is_checkmate("black"):
@@ -264,9 +246,6 @@ class ChessAI:
         if is_maximizing:
             best_score = float('-inf')
             for start, end in possible_moves:
-                # # Thực hiện nước đi
-                # board.move_piece(start, end)
-
                 # Tạo bản sao của bàn cờ để thử nước đi
                 board_copy = board.clone()
                 board_copy.move_piece(start, end)
@@ -274,26 +253,17 @@ class ChessAI:
                 # Đệ quy với độ sâu giảm 1
                 score, _ = self.minimax_alpha_beta(board_copy, depth - 1, alpha, beta, False)
 
-                # # Hoàn tác nước đi
-                # board.undo_move()
-
                 # Cập nhật nước đi tốt nhất
                 if score > best_score:
                     best_score = score
                     best_move = (start, end)
 
-                # Cập nhật alpha
                 alpha = max(alpha, best_score)
-
-                # Cắt tỉa beta
                 if beta <= alpha:
                     break
         else:
             best_score = float('inf')
             for start, end in possible_moves:
-                # # Thực hiện nước đi
-                # board.move_piece(start, end)
-
                 # Tạo bản sao của bàn cờ để thử nước đi
                 board_copy = board.clone()
                 board_copy.move_piece(start, end)
@@ -301,68 +271,26 @@ class ChessAI:
                 # Đệ quy với độ sâu giảm 1
                 score, _ = self.minimax_alpha_beta(board_copy, depth - 1, alpha, beta, True)
 
-                # # Hoàn tác nước đi
-                # board.undo_move()
-
                 # Cập nhật nước đi tốt nhất
                 if score < best_score:
                     best_score = score
                     best_move = (start, end)
 
-                # Cập nhật beta
                 beta = min(beta, best_score)
-
-                # Cắt tỉa alpha
                 if beta <= alpha:
                     break
 
         return best_score, best_move
 
+    # Hàm lấy nước đi tốt nhất dựa trên thuật toán alpha-beta pruning
     def get_best_move(self, board: Board, use_alpha_beta: bool = True) -> Optional[
         Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """
-        Tìm nước đi tốt nhất cho AI dựa trên thuật toán minimax với alpha-beta pruning.
-        """
-        # # Reset the position counter
-        # self.positions_evaluated = 0
-
-        # Kiểm tra xem có phải lượt của AI không
         if board.current_turn != self.color:
             return None
 
-        # Khởi tạo các giá trị alpha và beta cho alpha-beta pruning
         alpha = float('-inf')
         beta = float('inf')
 
-        # # Get all possible moves for AI
-        # possible_moves = self.get_all_possible_moves(board, self.color)
-        #
-        # # # Debug: Print all moves and their evaluations
-        # # print(f"Evaluating {len(possible_moves)} possible moves for {self.color}")
-        #
-        # # best_score = float('-inf')
-        # # best_move = None
-        #
-        # # # Evaluate each move directly
-        # # for start, end in possible_moves:
-        # #     # Make move on a copy of the board
-        # #     board_copy = board.clone()
-        # #     board_copy.move_piece(start, end)
-        # #
-        # #     # Evaluate the resulting position
-        # #     evaluation = self.evaluate_board(board_copy)
-        # #
-        # #     # Debug output
-        # #     print(f"Move {start} -> {end}: Score = {evaluation}")
-        # #
-        # #     # Keep track of best move
-        # #     if evaluation > best_score:
-        # #         best_score = evaluation
-        # #         best_move = (start, end)
-        #
-        # # print(f"Best move: {best_move} with score {best_score}")
-        #
-        # # Alternatively, use the original minimax
         _, minimax_move = self.minimax_alpha_beta(
             board=board,
             depth=self.depth,
@@ -370,16 +298,10 @@ class ChessAI:
             beta=beta,
             is_maximizing=True
         )
-
-        # print(f"Minimax suggested move: {minimax_move}")
-
-        # Return the original minimax move
         return minimax_move
 
+    # Hàm lấy tất cả các nước đi có thể cho một bên
     def get_all_possible_moves(self, board: Board, color: str) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
-        """
-        Lấy tất cả các nước đi có thể cho một bên
-        """
         moves = []
         for row in range(8):
             for col in range(8):

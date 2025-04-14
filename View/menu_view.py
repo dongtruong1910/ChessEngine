@@ -2,10 +2,8 @@ import pygame
 import os
 import sys
 
+# Màn hình bắt đầu
 class MenuView:
-    """
-    Hiển thị màn hình bắt đầu game cờ vua với tùy chọn chọn quân đen hoặc trắng.
-    """
     def __init__(self, screen_width=800, screen_height=600):
         # Khởi tạo pygame
         pygame.init()

@@ -1,30 +1,21 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional
 
+# abtract class Piece
 class Piece(ABC):
-    """
-    Lớp cơ sở trừu tượng cho tất cả các quân cờ.
-    """
     def __init__(self, color: str, position: Tuple[int, int]):
-        """
-        Khởi tạo quân cờ.
-        
-        Args:
-            color: Màu của quân cờ ('white' hoặc 'black')
-            position: Vị trí của quân cờ dưới dạng (row, col), bắt đầu từ (0,0)
-        """
         self.color = color
         self.position = position
         self.has_moved = False
         self.value = 0
-    
+
+    # Kiểm tra nước đi hợp lệ
     @abstractmethod
     def is_valid_move(self, board, target_position: Tuple[int, int]) -> bool:
-        """Kiểm tra xem một nước đi có hợp lệ không"""
         pass
-    
+
+    # Lấy danh sách các nước đi hợp lệ
     def get_valid_moves(self, board) -> List[Tuple[int, int]]:
-        """Lấy danh sách các nước đi hợp lệ"""
         valid_moves = []
         for row in range(8):
             for col in range(8):
@@ -33,43 +24,16 @@ class Piece(ABC):
         return valid_moves
     
     def move(self, target_position: Tuple[int, int]):
-        """
-        Di chuyển quân cờ đến vị trí mới.
-        
-        Args:
-            target_position: Vị trí đích dưới dạng (row, col)
-        """
         self.position = target_position
         self.has_moved = True  # Đánh dấu quân cờ đã di chuyển
     
     def get_symbol(self) -> str:
-        """
-        Trả về biểu tượng của quân cờ để hiển thị.
-        
-        Returns:
-            Chuỗi ký tự đại diện cho quân cờ
-        """
         return ""
         
     def get_color(self) -> str:
-        """
-        Trả về màu của quân cờ.
-        
-        Returns:
-            'white' hoặc 'black'
-        """
         return self.color
     
     def is_opponent(self, other_piece) -> bool:
-        """
-        Kiểm tra xem quân cờ khác có phải là đối thủ không.
-        
-        Args:
-            other_piece: Quân cờ khác cần kiểm tra
-            
-        Returns:
-            True nếu other_piece là đối thủ, False nếu không
-        """
         if other_piece is None:
             return False
         return self.color != other_piece.color
@@ -78,20 +42,11 @@ class Piece(ABC):
         pass
 
     def can_promote(self):
-        """
-        Kiểm tra xem quân cờ có thể phong cấp không.
-
-        Returns:
-            True nếu quân cờ có thể phong cấp, False nếu không
-        """
         return False
 
 
 
 class Pawn(Piece):
-    """
-    Quân tốt (Pawn).
-    """
     def __init__(self, color: str, position: Tuple[int, int]):
         super().__init__(color, position)
         self.value = 1
@@ -145,13 +100,9 @@ class Pawn(Piece):
                         last_move[1][1] == target_position[1]):  # Cùng cột với vị trí đích
                         return True
         return False
-    def can_promote(self):
-        """
-        Kiểm tra xem quân tốt có thể phong cấp không.
 
-        Returns:
-            True nếu quân tốt có thể phong cấp, False nếu không
-        """
+    # Kiểm tra phong cấp
+    def can_promote(self):
         if self.color == "white" and self.position[0] == 0:
             return True
         elif self.color == "black" and self.position[0] == 7:
@@ -160,9 +111,6 @@ class Pawn(Piece):
 
 
 class Knight(Piece):
-    """
-    Quân mã (Knight).
-    """
     def __init__(self, color: str, position: Tuple[int, int]):
         super().__init__(color, position)
         self.value = 3
@@ -187,9 +135,6 @@ class Knight(Piece):
 
 
 class Bishop(Piece):
-    """
-    Quân tượng (Bishop).
-    """
     def __init__(self, color: str, position: Tuple[int, int]):
         super().__init__(color, position)
         self.value = 3
@@ -227,9 +172,6 @@ class Bishop(Piece):
 
 
 class Rook(Piece):
-    """
-    Quân xe (Rook).
-    """
     def __init__(self, color: str, position: Tuple[int, int]):
         super().__init__(color, position)
         self.value = 5
@@ -269,9 +211,6 @@ class Rook(Piece):
 
 
 class Queen(Piece):
-    """
-    Quân hậu (Queen).
-    """
     def __init__(self, color: str, position: Tuple[int, int]):
         super().__init__(color, position)
         self.value = 9
@@ -290,7 +229,6 @@ class Queen(Piece):
             return False
             
         # Hậu có thể di chuyển như xe hoặc tượng
-        # Tạo tạm thời một quân xe và tượng để kiểm tra
         temp_rook = Rook(self.color, self.position)
         temp_bishop = Bishop(self.color, self.position)
         return (temp_rook.is_valid_move(board, target_position) or 
@@ -298,9 +236,6 @@ class Queen(Piece):
 
 
 class King(Piece):
-    """
-    Quân vua (King).
-    """
     def __init__(self, color: str, position: Tuple[int, int]):
         super().__init__(color, position)
         self.value = 0  # Vua không có giá trị vì không thể bị ăn
@@ -312,6 +247,7 @@ class King(Piece):
         # Kiểm tra vị trí đích có nằm trong bàn cờ không
         if not (0 <= target_position[0] < 8 and 0 <= target_position[1] < 8):
             return False
+
             
         # Kiểm tra vị trí đích có quân cờ cùng màu không
         target_piece = board.get_piece(target_position)

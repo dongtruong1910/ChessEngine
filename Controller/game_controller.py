@@ -1,3 +1,5 @@
+import threading
+
 from Model.board import Board
 from View.board_view import BoardView
 from Model.chess_ai import ChessAI
@@ -9,10 +11,8 @@ from View.pawn_promotion_view import PawnPromotionView
 
 class GameController:
     def __init__(self, player_color= None, time_limit=None):
-        # Thông tin game
+        # Thông tin người chơi và thời gian
         self.player_color = player_color
-        if time_limit is None:
-            raise ValueError("time_limit phải được chỉ định khi khởi tạo GameController")
         self.time_limit = time_limit * 60  # Chuyển đổi phút thành giây
 
         # Khởi tạo model
@@ -27,9 +27,6 @@ class GameController:
         # Lịch sử nước đi
         self.move_history = []
 
-
-
-        
         # Thời gian còn lại của mỗi người chơi (giây)
         self.player_remaining_time = self.time_limit
         self.ai_remaining_time = self.time_limit
@@ -43,18 +40,19 @@ class GameController:
         self.game_over = False
         self.winner = None  # "white", "black" hoặc None nếu hòa
 
-        # Make AI's first move if player is black
+        # AI đi trước nếu người chơi chọn quân đen
         if self.player_color == "black" and self.board.current_turn == "white":
             self.make_ai_move()
-        
+
+        # Trạng thái suy nghĩ của AI
+        self.ai_thinking = False
+
     def init_view(self, board_size=640, margin=30):
-        """Khởi tạo view cho game"""
         self.board_view = BoardView(board_size, margin, self.player_color)
         self.board_view.init_screen()
         self.update_view()
         
     def check_win(self):
-        """Kiểm tra xem có người chơi nào chiến thắng không"""
         # Kiểm tra chiếu tướng
         if self.board.is_checkmate("white"):
             self.game_over = True
@@ -75,39 +73,37 @@ class GameController:
             self.winner = "white" if self.player_color == "white" else "black"
             return True
             
-        # Kiểm tra hòa (có thể thêm các điều kiện hòa khác)
+        # Kiểm tra hòa
         if self.board.is_stalemate():
             self.game_over = True
             self.winner = None
             return True
             
         return False
-        
+
+    # Xử lý click chuột
     def handle_click(self, pos: Tuple[int, int]):
-        """Xử lý sự kiện click chuột"""
+
         if self.game_over:
             return
             
-        # # Nếu là lượt của AI, không xử lý click
+        # Nếu là lượt của AI, không xử lý click, nhưng vẫn xử lý click để cuộn lịch sử nước đi
         if self.board.current_turn != self.player_color:
-            # Still allow scrolling history during AI's turn
-            if self.board_view and hasattr(self.board_view, 'handle_scroll'):
+            if self.board_view:
                 self.board_view.handle_scroll(pos)
                 self.update_view()
             return
 
-        # Xử lý cuộn lịch sử nước đi - check this first before other interactions
-        if self.board_view and hasattr(self.board_view, 'handle_scroll'):
+        # Xử lý cuộn lịch sử nước đi
+        if self.board_view:
             if self.board_view.handle_scroll(pos):
                 self.update_view()
                 return
 
+        # Lấy ô vuông được click
         clicked_square = self.board_view.get_clicked_square(pos)
         if clicked_square is None:
             return
-
-
-
 
         if self.selected_piece is None:
             # Chọn quân cờ
@@ -123,6 +119,7 @@ class GameController:
                 if needs_promotion:
                     # Lấy màu của quân cờ cần phong cấp
                     piece_color = "black" if self.board.current_turn == "white" else "white"
+
                     # Hiển thị giao diện phong cấp
                     promotion_view = PawnPromotionView(self.board_view.screen, self.board_view.square_size)
                     chosen_piece = promotion_view.get_pawn_promotion_choice(piece_color, clicked_square[1])
@@ -143,24 +140,44 @@ class GameController:
             self.selected_piece = None
             self.valid_moves = []
             self.update_view()
-            
+
+    # Cho AI thực hiện nước đi
     def make_ai_move(self):
-        """Cho AI thực hiện nước đi"""
-        # Lấy nước đi tốt nhất từ AI
+
+
+        # Đánh dấu là AI đang suy nghĩ
+        self.ai_thinking = True
+
+        # Tạo thread cho AI suy nghĩ
+        ai_thread = threading.Thread(target=self._ai_thinking_process)
+        ai_thread.daemon = True
+        ai_thread.start()
+
+    # Thời gian suy nghĩ của AI, chạy trong một thread riêng
+    def _ai_thinking_process(self):
         best_move = self.ai.get_best_move(self.board)
+
+        # Kết thúc suy nghĩ
+        self.ai_thinking = False
+
         if best_move:
             start, end = best_move
             # Thực hiện nước đi
-            self.board.move_piece(start, end)
-            # Cập nhật thời gian
-            self.update_time()
+            needs_promotion = self.board.move_piece(start, end)
+            if not needs_promotion:
+                self.board.move_piece(start, end)
+            else:
+                self.board.promote_pawn(end, "queen")  # Mặc định phong cấp thành hậu
+
+            # Reset thời gian bắt đầu lượt mới
+            self.current_turn_start_time = pygame.time.get_ticks()
+
             # Kiểm tra chiến thắng
             self.check_win()
-            # Cập nhật giao diện
-            self.update_view()
-        
+
+    # Cập nhật thời gian còn lại
     def update_time(self):
-        """Cập nhật thời gian còn lại sau mỗi nước đi"""
+
         if self.current_turn_start_time is None:
             self.current_turn_start_time = pygame.time.get_ticks()
             return
@@ -179,9 +196,9 @@ class GameController:
         
         # Kiểm tra chiến thắng
         self.check_win()
-        
+
+    # Cập nhật view
     def update_view(self):
-        """Cập nhật giao diện"""
         if self.board_view:
             # Lấy thông tin từ model để truyền cho view
             pieces_data = self.board.get_all_pieces()
@@ -195,11 +212,9 @@ class GameController:
                 game_over=self.game_over,
                 winner=self.winner,
                 move_history = move_history
-
             )
-            
+
     def run(self):
-        """Chạy game"""
         # Cập nhật thời gian nếu chưa có thời gian bắt đầu lượt
         if self.current_turn_start_time is None:
             self.current_turn_start_time = pygame.time.get_ticks()
@@ -208,6 +223,8 @@ class GameController:
         current_time = pygame.time.get_ticks()
         if self.current_turn_start_time is not None:
             elapsed_time = (current_time - self.current_turn_start_time) / 1000
+            if self.ai_thinking:
+                self.ai_remaining_time -= elapsed_time
             if self.board.current_turn == self.player_color:
                 self.player_remaining_time -= elapsed_time
             else:

@@ -2,11 +2,8 @@ import pygame
 import os
 from typing import Optional
 
-
+# Giao diện phong cấp
 class PawnPromotionView:
-    """
-    Hiển thị giao diện cho phép người chơi chọn quân cờ khi tốt được phong cấp
-    """
 
     def __init__(self, screen, square_size):
         self.screen = screen
@@ -26,7 +23,6 @@ class PawnPromotionView:
         self.promotion_pieces = ["queen", "rook", "bishop", "knight"]
 
     def load_piece_images(self):
-        """Tải hình ảnh quân cờ"""
         pieces = ["queen", "rook", "bishop", "knight"]
         colors = ["white", "black"]
 
@@ -39,18 +35,8 @@ class PawnPromotionView:
                     image = pygame.transform.scale(image, (self.square_size, self.square_size))
                     self.piece_images[f"{color}_{piece}"] = image
 
+    # Hiển thị hộp phong cấp
     def display_pawn_promotion(self, color: str, col: int) -> Optional[str]:
-        """
-        Hiển thị các lựa chọn phong cấp
-
-        Args:
-            color: Màu của quân cờ ("white" hoặc "black")
-            col: Cột nơi tốt được phong cấp (0-7)
-
-        Returns:
-            str: Loại quân cờ được chọn
-        """
-        # Tính toán vị trí của hộp phong cấp (4 ô vuông cạnh nhau theo chiều ngang)
         width, height = self.screen.get_size()
         x = max(0, min(col * self.square_size, width - 4 * self.square_size))
         y = height // 2 - self.square_size // 2
@@ -102,14 +88,4 @@ class PawnPromotionView:
         return "queen"  # Mặc định là hậu
 
     def get_pawn_promotion_choice(self, color: str, col: int) -> str:
-        """
-        Lấy lựa chọn phong cấp từ người chơi
-
-        Args:
-            color: Màu của quân cờ ("white" hoặc "black") 
-            col: Cột nơi tốt được phong cấp (0-7)
-
-        Returns:
-            str: Loại quân cờ được chọn
-        """
         return self.display_pawn_promotion(color, col)

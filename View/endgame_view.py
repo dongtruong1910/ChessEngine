@@ -2,10 +2,8 @@ import pygame
 import sys
 from typing import Optional
 
+# Màn hình kết thúc game
 class EndgameView:
-    """
-    Hiển thị kết quả game và tùy chọn tiếp tục hoặc thoát
-    """
 
     def __init__(self, screen, winner: Optional[str] = None):
         self.screen = screen
@@ -27,8 +25,8 @@ class EndgameView:
         self.continue_button = pygame.Rect(self.screen_width // 2 - 150, self.screen_height // 2 + 80, 120, 40)
         self.exit_button = pygame.Rect(self.screen_width // 2 + 30, self.screen_height // 2 + 80, 120, 40)
 
+    # Vẽ Overlay và các button
     def draw(self):
-        """Vẽ overlay kết thúc game và trả về kết quả từ handle_events"""
         # Tạo lớp overlay mờ
         overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 192))  # Màu đen với độ trong suốt
@@ -57,11 +55,10 @@ class EndgameView:
         # Cập nhật màn hình
         pygame.display.flip()
 
-        # CRITICAL FIX: Return the result from handle_events
         return self.handle_events()
 
+    # Vẽ button với hiệu ứng hover
     def draw_button(self, button_rect, text):
-        """Vẽ button với hiệu ứng hover"""
         # Kiểm tra hover
         mouse_pos = pygame.mouse.get_pos()
         color = self.button_hover_color if button_rect.collidepoint(mouse_pos) else self.button_color
@@ -75,8 +72,8 @@ class EndgameView:
         text_rect = text_surface.get_rect(center=button_rect.center)
         self.screen.blit(text_surface, text_rect)
 
+    # Xử lý sự kiện click chuột
     def handle_events(self):
-        """Xử lý sự kiện cho màn hình kết thúc và trả về kết quả"""
         waiting = True
         while waiting:
             for event in pygame.event.get():
